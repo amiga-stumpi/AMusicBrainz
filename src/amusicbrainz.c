@@ -21,6 +21,7 @@
 #define HTTP_BUF_SIZE 32768UL
 #define RESULT_LINES 80
 #define RESULT_LINE_SIZE 96
+#define SEARCH_RESULT_LIMIT 20
 
 #define GID_QUERY 1
 #define GID_SEARCH 2
@@ -958,7 +959,7 @@ static void build_search_path(char *path, ULONG path_size)
     append_text(path, path_size, entity);
     append_text(path, path_size, "?query=");
     append_text(path, path_size, query);
-    append_text(path, path_size, "&fmt=json&limit=80");
+    append_text(path, path_size, "&fmt=json&limit=20");
 }
 
 static int http_fetch_path(const char *path)
@@ -1195,7 +1196,7 @@ static void parse_results(void)
         return;
     }
 
-    while ((p = next_array_object(p)) != 0 && g_result_count < RESULT_LINES) {
+    while ((p = next_array_object(p)) != 0 && g_result_count < SEARCH_RESULT_LIMIT) {
         end = object_end(p);
         if (!end)
             break;
@@ -1390,7 +1391,7 @@ static void fetch_artist_albums(const char *artist_id, const char *artist_name)
     parse_album_results();
     g_hit_kind = HIT_ALBUMS;
     if (g_results_truncated)
-        set_status("Too many results - refine search");
+        set_status("Album list truncated");
     else
         set_status("Albums loaded");
     redraw();

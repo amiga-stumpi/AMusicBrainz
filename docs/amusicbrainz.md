@@ -23,7 +23,7 @@ It does not call any TheWire13-internal APIs.
 
 1. Enter a search term.
 2. Select `Artist`, `Releases`, or `Track`.
-3. Press `Search`. Multi-word searches are sent as AND-linked MusicBrainz queries. If the result list reaches its capacity, the status line asks you to refine the search with more terms.
+3. Press `Search`. Multi-word searches are sent as AND-linked MusicBrainz queries. Normal searches are limited to 20 results; if more matches exist, the status line asks you to refine the search with more terms. Clicking an artist loads a larger album list for that artist.
 
 The result area resizes with the window. The main window position and size are saved to `AMusicBrainz.conf` in the startup directory and restored on the next launch. In artist mode, clicking an artist loads that artist's album list sorted by release year. Clicking an album opens the track list in album order. Use the Up/Down buttons to scroll longer lists. The `? -> Info` menu opens the version/about dialog. Incoming UTF-8 and simple JSON Unicode escapes are converted to single-byte display characters for umlauts and common Latin-1 names.
 

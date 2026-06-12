@@ -11,6 +11,7 @@ It uses the public `bsdsocket.library` API directly, so it is intended to work w
 - Search modes: `Artist`, `Releases`, `Track`
 - AND-linked multi-word searches
 - Status warning when the result list reaches its capacity
+- Normal search results are limited to 20 entries; artist album drill-down can show larger discographies
 - Plain HTTP MusicBrainz requests on port 80
 - Concise result list with artist/release/track names and dates where available
 - Main window position/size is restored from `AMusicBrainz.conf`
