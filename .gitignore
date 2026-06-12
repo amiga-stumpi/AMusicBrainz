@@ -1,0 +1,11 @@
+# Build artifacts
+build/
+*.o
+
+# Local runtime settings
+AMusicBrainz.conf
+
+# Local screenshots/debug captures
+screenshots/
+Logs/
+*.log
