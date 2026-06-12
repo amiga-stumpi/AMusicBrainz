@@ -267,18 +267,53 @@ static LONG config_get_long(const char *key, LONG fallback)
 
 static void validate_window_def(struct NewWindow *nw)
 {
+    struct Screen *screen;
+    WORD max_w;
+    WORD max_h;
+
+    max_w = nw->MaxWidth;
+    max_h = nw->MaxHeight;
+    screen = IntuitionBase ? IntuitionBase->ActiveScreen : 0;
+    if (!screen && IntuitionBase)
+        screen = IntuitionBase->FirstScreen;
+    if (screen) {
+        max_w = screen->Width;
+        max_h = screen->Height;
+        if (max_w > nw->MaxWidth)
+            max_w = nw->MaxWidth;
+        if (max_h > nw->MaxHeight)
+            max_h = nw->MaxHeight;
+    }
+
     if (nw->Width < nw->MinWidth)
         nw->Width = nw->MinWidth;
     if (nw->Height < nw->MinHeight)
         nw->Height = nw->MinHeight;
-    if (nw->Width > nw->MaxWidth)
-        nw->Width = nw->MaxWidth;
-    if (nw->Height > nw->MaxHeight)
-        nw->Height = nw->MaxHeight;
+    if (nw->Width > max_w)
+        nw->Width = max_w;
+    if (nw->Height > max_h)
+        nw->Height = max_h;
     if (nw->LeftEdge < 0)
         nw->LeftEdge = 0;
     if (nw->TopEdge < 0)
         nw->TopEdge = 0;
+    if (nw->LeftEdge + nw->Width > max_w)
+        nw->LeftEdge = (WORD)(max_w - nw->Width);
+    if (nw->TopEdge + nw->Height > max_h)
+        nw->TopEdge = (WORD)(max_h - nw->Height);
+    if (nw->LeftEdge < 0)
+        nw->LeftEdge = 0;
+    if (nw->TopEdge < 0)
+        nw->TopEdge = 0;
+}
+
+static void reset_default_window_def(void)
+{
+    g_new_window.LeftEdge = 20;
+    g_new_window.TopEdge = 20;
+    g_new_window.Width = 560;
+    g_new_window.Height = 180;
+    validate_window_def(&g_new_window);
 }
 
 static void load_config(void)
@@ -1537,6 +1572,10 @@ int main(void)
     clear_results();
     add_result("Enter a query and press Search");
     g_win = OpenWindow(&g_new_window);
+    if (!g_win) {
+        reset_default_window_def();
+        g_win = OpenWindow(&g_new_window);
+    }
     if (!g_win) {
         FreeMem(g_http_buf, HTTP_BUF_SIZE);
         close_libs();
