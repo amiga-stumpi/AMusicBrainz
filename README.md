@@ -16,7 +16,7 @@ It uses the public `bsdsocket.library` API directly, so it is intended to work w
 - Concise result list with artist/release/track names and dates where available
 - Main window position/size is restored from `AMusicBrainz.conf`
 - `? -> Info` dialog with version/about text
-- Artist-result click loads the artist album list sorted by year
+- Artist-result click loads the artist release-group album list sorted by year
 - Album click loads the album track list in track order
 - Scroll buttons for long result lists
 - Basic UTF-8/JSON escape decoding for umlauts and Latin-1 characters

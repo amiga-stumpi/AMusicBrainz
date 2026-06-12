@@ -1243,9 +1243,17 @@ static void parse_results(void)
 static void make_artist_album_path(char *path, ULONG path_size, const char *artist_id)
 {
     path[0] = 0;
-    append_text(path, path_size, "/ws/2/release?artist=");
+    append_text(path, path_size, "/ws/2/release-group?artist=");
     append_text(path, path_size, artist_id);
     append_text(path, path_size, "&type=album&fmt=json&limit=100");
+}
+
+static void make_release_group_release_path(char *path, ULONG path_size, const char *release_group_id)
+{
+    path[0] = 0;
+    append_text(path, path_size, "/ws/2/release?release-group=");
+    append_text(path, path_size, release_group_id);
+    append_text(path, path_size, "&fmt=json&limit=1");
 }
 
 static void make_album_track_path(char *path, ULONG path_size, const char *release_id)
@@ -1277,13 +1285,14 @@ static void parse_album_results(void)
     char date[20];
     char year[8];
     char line[RESULT_LINE_SIZE];
+    char value[QUERY_SIZE];
 
     clear_results();
     while (*p && !(*p == '\r' && p[1] == '\n' && p[2] == '\r' && p[3] == '\n'))
         ++p;
     if (*p)
         p += 4;
-    p = find_array_start(p, "releases");
+    p = find_array_start(p, "release-groups");
     if (!p) {
         add_result("No albums found");
         return;
@@ -1294,10 +1303,12 @@ static void parse_album_results(void)
         if (!end)
             break;
         *end = 0;
-        id[0] = title[0] = date[0] = year[0] = 0;
+        id[0] = title[0] = date[0] = year[0] = value[0] = 0;
         extract_string(p, "id", id, sizeof(id));
         extract_string(p, "title", title, sizeof(title));
-        extract_string(p, "date", date, sizeof(date));
+        extract_string(p, "first-release-date", date, sizeof(date));
+        if (!date[0])
+            extract_string(p, "date", date, sizeof(date));
         date_to_year(date, year, sizeof(year));
         if (id[0] && title[0]) {
             line[0] = 0;
@@ -1308,7 +1319,9 @@ static void parse_album_results(void)
                 append_text(line, sizeof(line), "???? - ");
             }
             append_text(line, sizeof(line), title);
-            add_or_replace_result_full(line, id, title, year[0] ? year : "9999");
+            append_text(value, sizeof(value), "rg:");
+            append_text(value, sizeof(value), id);
+            add_or_replace_result_full(line, value, title, year[0] ? year : "9999");
         }
         *end = '}';
         p = end + 1;
@@ -1397,13 +1410,59 @@ static void fetch_artist_albums(const char *artist_id, const char *artist_name)
     redraw();
 }
 
+static int parse_first_release_id(char *out, ULONG out_size)
+{
+    char *p = g_http_buf;
+    char *end;
+
+    out[0] = 0;
+    while (*p && !(*p == '\r' && p[1] == '\n' && p[2] == '\r' && p[3] == '\n'))
+        ++p;
+    if (*p)
+        p += 4;
+    p = find_array_start(p, "releases");
+    if (!p)
+        return 0;
+    p = next_array_object(p);
+    if (!p)
+        return 0;
+    end = object_end(p);
+    if (!end)
+        return 0;
+    *end = 0;
+    extract_string(p, "id", out, out_size);
+    *end = '}';
+    return out[0] != 0;
+}
+
+
+static int is_release_group_ref(const char *id)
+{
+    return id && id[0] == 'r' && id[1] == 'g' && id[2] == ':';
+}
+
 static void fetch_album_tracks(const char *release_id, const char *release_title)
 {
     char path[HTTP_REQ_SIZE];
+    char actual_id[QUERY_SIZE];
     int r;
 
     set_status("Loading tracks...");
     redraw();
+    if (is_release_group_ref(release_id)) {
+        set_status("Resolving release...");
+        redraw();
+        make_release_group_release_path(path, sizeof(path), release_id + 3);
+        r = http_fetch_path(path);
+        if (r <= 0 || !parse_first_release_id(actual_id, sizeof(actual_id))) {
+            clear_results();
+            add_result("Release lookup failed");
+            set_status("Release API failed");
+            redraw();
+            return;
+        }
+        release_id = actual_id;
+    }
     make_album_track_path(path, sizeof(path), release_id);
     r = http_fetch_path(path);
     if (r <= 0) {
