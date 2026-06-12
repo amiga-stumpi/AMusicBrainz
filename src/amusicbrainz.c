@@ -1481,6 +1481,7 @@ static void fetch_album_tracks(const char *release_id, const char *release_title
 {
     char path[HTTP_REQ_SIZE];
     char actual_id[QUERY_SIZE];
+    char status[96];
     int r;
 
     set_status("Loading tracks...");
@@ -1512,8 +1513,12 @@ static void fetch_album_tracks(const char *release_id, const char *release_title
     g_hit_kind = HIT_TRACKS;
     if (g_results_truncated)
         set_status("Too many results - refine search");
-    else
-        set_status(release_title);
+    else {
+        status[0] = 0;
+        append_text(status, sizeof(status), "Release: ");
+        append_text(status, sizeof(status), release_title);
+        set_status(status);
+    }
     redraw();
 }
 
