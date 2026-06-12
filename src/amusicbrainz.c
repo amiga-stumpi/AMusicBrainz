@@ -40,6 +40,7 @@
 #define SEPARATOR_Y 51
 #define RESULT_BOX_Y 57
 #define RESULT_TEXT_Y 71
+#define RESULT_ROW_TOP (RESULT_TEXT_Y - 8)
 #define RESULT_BOTTOM_PAD 77
 #define RESULT_ROW_H 10
 
@@ -550,7 +551,7 @@ static void flash_result_index(UWORD idx)
     row = (UWORD)(idx - g_main_top);
     if (row >= main_visible_rows())
         return;
-    y = (WORD)(RESULT_TEXT_Y - 8 + row * RESULT_ROW_H);
+    y = (WORD)(RESULT_ROW_TOP + row * RESULT_ROW_H);
     flash_rect(10, y, (WORD)(g_win->Width - 18), (WORD)(y + RESULT_ROW_H - 1));
 }
 
@@ -1561,9 +1562,9 @@ static int main_result_index_at_y(WORD mouse_y, UWORD *out_idx)
     if (!g_win || !out_idx)
         return 0;
     visible = main_visible_rows();
-    if (mouse_y < RESULT_BOX_Y || mouse_y >= (WORD)(RESULT_TEXT_Y + visible * RESULT_ROW_H))
+    if (mouse_y < RESULT_ROW_TOP || mouse_y >= (WORD)(RESULT_ROW_TOP + visible * RESULT_ROW_H))
         return 0;
-    row = (WORD)((mouse_y - RESULT_TEXT_Y) / RESULT_ROW_H);
+    row = (WORD)((mouse_y - RESULT_ROW_TOP) / RESULT_ROW_H);
     if (row < 0)
         row = 0;
     if ((UWORD)row >= visible || (UWORD)(g_main_top + (UWORD)row) >= g_result_count)
