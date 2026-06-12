@@ -35,7 +35,7 @@
 #define GID_BACK 9
 
 #define QUERY_LABEL_Y 23
-#define QUERY_GADGET_Y 13
+#define QUERY_GADGET_Y 18
 #define MODE_GADGET_Y 31
 #define MODE_MARK_Y 41
 #define SEPARATOR_Y 51
