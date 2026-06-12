@@ -696,7 +696,7 @@ static void redraw(void)
         y = (WORD)(y + RESULT_ROW_H);
     }
     RefreshGList(&g_scroll_up_gad, g_win, 0, 2);
-    Move(g_win->RPort, 8, (WORD)(h - 12));
+    Move(g_win->RPort, 8, (WORD)(h - 14));
     Text(g_win->RPort, (STRPTR)g_status, text_len(g_status));
     draw_mode_marks();
 }
@@ -1665,7 +1665,7 @@ int main(void)
             } else if (cls == IDCMP_MOUSEBUTTONS && code == SELECTDOWN) {
                 handle_main_result_click(mouse_y);
             } else if (cls == IDCMP_GADGETUP && gad) {
-                if (gad->GadgetID == GID_SEARCH)
+                if (gad->GadgetID == GID_SEARCH || gad->GadgetID == GID_QUERY)
                     do_search();
                 else if (gad->GadgetID == GID_ARTIST) {
                     g_mode = MODE_ARTIST;
