@@ -32,6 +32,7 @@
 #define GID_SCROLL_UP 6
 #define GID_SCROLL_DOWN 7
 #define GID_INFO_OK 8
+#define GID_BACK 9
 
 #define QUERY_LABEL_Y 23
 #define QUERY_GADGET_Y 13
@@ -70,10 +71,20 @@ static UWORD g_mode = MODE_ARTIST;
 static UWORD g_hit_kind;
 static UWORD g_main_top;
 static UWORD g_results_truncated;
+static char g_saved_results[RESULT_LINES][RESULT_LINE_SIZE];
+static char g_saved_values[RESULT_LINES][QUERY_SIZE];
+static char g_saved_select[RESULT_LINES][QUERY_SIZE];
+static char g_saved_keys[RESULT_LINES][20];
+static UWORD g_saved_count;
+static UWORD g_saved_top;
+static UWORD g_saved_truncated;
+static UWORD g_saved_valid;
+static char g_saved_status[96];
 static char g_config_buf[512];
 
 static void do_search(void);
 static void redraw(void);
+static void set_status(const char *s);
 static void fetch_artist_albums(const char *artist_id, const char *artist_name);
 static void fetch_album_tracks(const char *release_id, const char *release_title);
 static UWORD main_visible_rows(void);
@@ -89,6 +100,7 @@ static struct IntuiText g_releases_text = { 1, 0, JAM2, 10, 2, 0, (UBYTE *)"Rele
 static struct IntuiText g_track_text = { 1, 0, JAM2, 16, 2, 0, (UBYTE *)"Track", 0 };
 static struct IntuiText g_scroll_up_text = { 1, 0, JAM2, 8, 2, 0, (UBYTE *)"Up", 0 };
 static struct IntuiText g_scroll_down_text = { 1, 0, JAM2, 2, 2, 0, (UBYTE *)"Down", 0 };
+static struct IntuiText g_back_text = { 1, 0, JAM2, 5, 2, 0, (UBYTE *)"Back", 0 };
 
 static struct IntuiText g_menu_info_text = { 0, 1, JAM2, 6, 1, 0, (UBYTE *)"Info", 0 };
 static struct IntuiText g_info_ok_text = { 0, 1, JAM2, 16, 1, 0, (UBYTE *)"OK", 0 };
@@ -116,8 +128,12 @@ static struct Gadget g_scroll_up_gad = {
     &g_scroll_down_gad, 500, 58, 50, 14, GFLG_GADGHCOMP, GACT_RELVERIFY,
     GTYP_BOOLGADGET, 0, 0, &g_scroll_up_text, 0, 0, GID_SCROLL_UP, 0
 };
+static struct Gadget g_back_gad = {
+    &g_scroll_up_gad, 500, 58, 50, 14, GFLG_GADGHCOMP, GACT_RELVERIFY,
+    GTYP_BOOLGADGET, 0, 0, &g_back_text, 0, 0, GID_BACK, 0
+};
 static struct Gadget g_track_gad = {
-    &g_scroll_up_gad, 254, MODE_GADGET_Y, 72, 14, GFLG_GADGHCOMP, GACT_RELVERIFY,
+    &g_back_gad, 254, MODE_GADGET_Y, 72, 14, GFLG_GADGHCOMP, GACT_RELVERIFY,
     GTYP_BOOLGADGET, 0, 0, &g_track_text, 0, 0, GID_TRACK, 0
 };
 static struct Gadget g_releases_gad = {
@@ -408,6 +424,46 @@ static void add_result(const char *line)
     add_result_full(line, line, line, "");
 }
 
+static void save_album_results(void)
+{
+    UWORD i;
+
+    g_saved_count = g_result_count;
+    g_saved_top = g_main_top;
+    g_saved_truncated = g_results_truncated;
+    copy_text(g_saved_status, sizeof(g_saved_status), g_status);
+    for (i = 0; i < RESULT_LINES; ++i) {
+        copy_text(g_saved_results[i], RESULT_LINE_SIZE, g_results[i]);
+        copy_text(g_saved_values[i], QUERY_SIZE, g_result_values[i]);
+        copy_text(g_saved_select[i], QUERY_SIZE, g_result_select[i]);
+        copy_text(g_saved_keys[i], sizeof(g_saved_keys[i]), g_result_keys[i]);
+    }
+    g_saved_valid = 1;
+}
+
+static void restore_album_results(void)
+{
+    UWORD i;
+
+    if (!g_saved_valid) {
+        set_status("No album list");
+        redraw();
+        return;
+    }
+    g_result_count = g_saved_count;
+    g_main_top = g_saved_top;
+    g_results_truncated = g_saved_truncated;
+    for (i = 0; i < RESULT_LINES; ++i) {
+        copy_text(g_results[i], RESULT_LINE_SIZE, g_saved_results[i]);
+        copy_text(g_result_values[i], QUERY_SIZE, g_saved_values[i]);
+        copy_text(g_result_select[i], QUERY_SIZE, g_saved_select[i]);
+        copy_text(g_result_keys[i], sizeof(g_result_keys[i]), g_saved_keys[i]);
+    }
+    g_hit_kind = HIT_ALBUMS;
+    set_status(g_saved_status[0] ? g_saved_status : "Albums loaded");
+    redraw();
+}
+
 static int text_equal(const char *a, const char *b)
 {
     while (*a && *b) {
@@ -681,12 +737,16 @@ static void relayout_gadgets(void)
         query_w = 150;
     g_query_gad.Width = query_w;
     g_search_gad.LeftEdge = (WORD)(g_query_gad.LeftEdge + query_w + 8);
+    g_back_gad.LeftEdge = (WORD)(w - 174);
     g_scroll_up_gad.LeftEdge = (WORD)(w - 118);
     g_scroll_down_gad.LeftEdge = (WORD)(w - 62);
+    if (g_back_gad.LeftEdge < 194)
+        g_back_gad.LeftEdge = 194;
     if (g_scroll_up_gad.LeftEdge < 250)
         g_scroll_up_gad.LeftEdge = 250;
     if (g_scroll_down_gad.LeftEdge < 306)
         g_scroll_down_gad.LeftEdge = 306;
+    g_back_gad.TopEdge = (WORD)(g_win->Height - 22);
     g_scroll_up_gad.TopEdge = (WORD)(g_win->Height - 22);
     g_scroll_down_gad.TopEdge = (WORD)(g_win->Height - 22);
 }
@@ -732,7 +792,7 @@ static void redraw(void)
         Text(g_win->RPort, (STRPTR)g_results[g_main_top + i], text_len(g_results[g_main_top + i]));
         y = (WORD)(y + RESULT_ROW_H);
     }
-    RefreshGList(&g_scroll_up_gad, g_win, 0, 2);
+    RefreshGList(&g_back_gad, g_win, 0, 3);
     Move(g_win->RPort, 8, (WORD)(h - 14));
     Text(g_win->RPort, (STRPTR)g_status, text_len(g_status));
     draw_mode_marks();
@@ -1475,6 +1535,7 @@ static void fetch_artist_albums(const char *artist_id, const char *artist_name)
         set_status("Album list truncated");
     else
         set_status("Albums loaded");
+    save_album_results();
     redraw();
 }
 
@@ -1651,6 +1712,7 @@ static void do_search(void)
         return;
     }
     set_status("Searching...");
+    g_saved_valid = 0;
     clear_results();
     redraw();
     r = http_fetch();
@@ -1755,6 +1817,8 @@ int main(void)
                     g_mode = MODE_TRACK;
                     set_status("Mode: Track");
                     redraw();
+                } else if (gad->GadgetID == GID_BACK) {
+                    restore_album_results();
                 } else if (gad->GadgetID == GID_SCROLL_UP) {
                     scroll_results_up();
                 } else if (gad->GadgetID == GID_SCROLL_DOWN) {
