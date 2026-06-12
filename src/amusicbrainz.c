@@ -1234,7 +1234,7 @@ static void parse_results(void)
         *end = '}';
         p = end + 1;
     }
-    if (p && next_array_object(p))
+    if (g_result_count >= SEARCH_RESULT_LIMIT && p && next_array_object(p))
         g_results_truncated = 1;
     if (g_result_count == 0)
         add_result("No results");
@@ -1313,7 +1313,7 @@ static void parse_album_results(void)
         *end = '}';
         p = end + 1;
     }
-    if (p && next_array_object(p))
+    if (g_result_count >= RESULT_LINES && p && next_array_object(p))
         g_results_truncated = 1;
     sort_results_by_key();
     if (g_result_count == 0)
@@ -1364,7 +1364,7 @@ static void parse_track_results(void)
         *end = '}';
         p = end + 1;
     }
-    if (p && next_array_object(p))
+    if (g_result_count >= RESULT_LINES && p && next_array_object(p))
         g_results_truncated = 1;
     sort_results_by_key();
     if (g_result_count == 0)
