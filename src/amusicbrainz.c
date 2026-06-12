@@ -1114,7 +1114,15 @@ static void extract_string(char *start, const char *field, char *out, ULONG out_
                              ((ULONG)hex_value(p[2]) << 8) |
                              ((ULONG)hex_value(p[3]) << 4) |
                              (ULONG)hex_value(p[4]);
-                if (code >= 32 && code <= 255)
+                if (code == 0x2018 || code == 0x2019 || code == 0x02bc)
+                    out[i++] = (char)39;
+                else if (code == 0x201c || code == 0x201d)
+                    out[i++] = '"';
+                else if (code == 0x2013 || code == 0x2014 || code == 0x2212)
+                    out[i++] = '-';
+                else if (code == 0x2026)
+                    out[i++] = '.';
+                else if (code >= 32 && code <= 255)
                     out[i++] = (char)code;
                 else if (code >= 32)
                     out[i++] = '?';
@@ -1139,6 +1147,29 @@ static void extract_string(char *start, const char *field, char *out, ULONG out_
             out[i++] = (char)((UBYTE)p[1] + 0x40);
             p += 2;
             continue;
+        }
+        if (c == 0xe2 && (UBYTE)p[1] == 0x80) {
+            UBYTE c2 = (UBYTE)p[2];
+            if (c2 == 0x98 || c2 == 0x99) {
+                out[i++] = (char)39;
+                p += 3;
+                continue;
+            }
+            if (c2 == 0x9c || c2 == 0x9d) {
+                out[i++] = '"';
+                p += 3;
+                continue;
+            }
+            if (c2 == 0x93 || c2 == 0x94) {
+                out[i++] = '-';
+                p += 3;
+                continue;
+            }
+            if (c2 == 0xa6) {
+                out[i++] = '.';
+                p += 3;
+                continue;
+            }
         }
         if (c < 0x80) {
             if (c >= 32)
