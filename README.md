@@ -10,6 +10,7 @@ It uses the public `bsdsocket.library` API directly, so it is intended to work w
 - Search input field and `Search` button
 - Search modes: `Artist`, `Releases`, `Track`
 - AND-linked multi-word searches
+- Status warning when the result list reaches its capacity
 - Plain HTTP MusicBrainz requests on port 80
 - Concise result list with artist/release/track names and dates where available
 - Main window position/size is restored from `AMusicBrainz.conf`

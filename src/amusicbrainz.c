@@ -66,6 +66,7 @@ static UWORD g_result_count;
 static UWORD g_mode = MODE_ARTIST;
 static UWORD g_hit_kind;
 static UWORD g_main_top;
+static UWORD g_results_truncated;
 static char g_config_buf[512];
 
 static void do_search(void);
@@ -343,6 +344,7 @@ static void clear_results(void)
     UWORD i;
     g_result_count = 0;
     g_main_top = 0;
+    g_results_truncated = 0;
     for (i = 0; i < RESULT_LINES; ++i) {
         g_results[i][0] = 0;
         g_result_values[i][0] = 0;
@@ -921,7 +923,7 @@ static void build_search_path(char *path, ULONG path_size)
     append_text(path, path_size, entity);
     append_text(path, path_size, "?query=");
     append_text(path, path_size, query);
-    append_text(path, path_size, "&fmt=json&limit=20");
+    append_text(path, path_size, "&fmt=json&limit=80");
 }
 
 static int http_fetch_path(const char *path)
@@ -1158,7 +1160,7 @@ static void parse_results(void)
         return;
     }
 
-    while ((p = next_array_object(p)) != 0 && g_result_count < 20) {
+    while ((p = next_array_object(p)) != 0 && g_result_count < RESULT_LINES) {
         end = object_end(p);
         if (!end)
             break;
@@ -1196,6 +1198,8 @@ static void parse_results(void)
         *end = '}';
         p = end + 1;
     }
+    if (p && next_array_object(p))
+        g_results_truncated = 1;
     if (g_result_count == 0)
         add_result("No results");
 }
@@ -1273,6 +1277,8 @@ static void parse_album_results(void)
         *end = '}';
         p = end + 1;
     }
+    if (p && next_array_object(p))
+        g_results_truncated = 1;
     sort_results_by_key();
     if (g_result_count == 0)
         add_result("No albums found");
@@ -1322,6 +1328,8 @@ static void parse_track_results(void)
         *end = '}';
         p = end + 1;
     }
+    if (p && next_array_object(p))
+        g_results_truncated = 1;
     sort_results_by_key();
     if (g_result_count == 0)
         add_result("No tracks found");
@@ -1346,7 +1354,10 @@ static void fetch_artist_albums(const char *artist_id, const char *artist_name)
     }
     parse_album_results();
     g_hit_kind = HIT_ALBUMS;
-    set_status("Albums loaded");
+    if (g_results_truncated)
+        set_status("Too many results - refine search");
+    else
+        set_status("Albums loaded");
     redraw();
 }
 
@@ -1368,7 +1379,10 @@ static void fetch_album_tracks(const char *release_id, const char *release_title
     }
     parse_track_results();
     g_hit_kind = HIT_TRACKS;
-    set_status(release_title);
+    if (g_results_truncated)
+        set_status("Too many results - refine search");
+    else
+        set_status(release_title);
     redraw();
 }
 
@@ -1479,7 +1493,10 @@ static void do_search(void)
     }
     parse_results();
     g_hit_kind = (g_mode == MODE_ARTIST) ? HIT_ARTISTS : ((g_mode == MODE_RELEASES) ? HIT_ALBUMS : HIT_TRACKS);
-    set_status("Done");
+    if (g_results_truncated)
+        set_status("Too many results - refine search");
+    else
+        set_status("Done");
     redraw();
 }
 
