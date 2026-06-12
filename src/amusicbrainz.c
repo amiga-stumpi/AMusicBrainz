@@ -4,6 +4,7 @@
 #include <intuition/intuition.h>
 #include <intuition/intuitionbase.h>
 #include <graphics/gfxbase.h>
+#include <graphics/rastport.h>
 #include <proto/exec.h>
 #include <proto/dos.h>
 #include <proto/intuition.h>
@@ -74,6 +75,7 @@ static void do_search(void);
 static void redraw(void);
 static void fetch_artist_albums(const char *artist_id, const char *artist_name);
 static void fetch_album_tracks(const char *release_id, const char *release_title);
+static UWORD main_visible_rows(void);
 
 static struct StringInfo g_query_si = {
     (STRPTR)g_query, (STRPTR)g_query_undo, 0, QUERY_SIZE,
@@ -516,6 +518,40 @@ static void draw_box(WORD x, WORD y, WORD w, WORD h)
     Draw(g_win->RPort, (WORD)(x + w - 1), (WORD)(y + h - 1));
     Draw(g_win->RPort, x, (WORD)(y + h - 1));
     Draw(g_win->RPort, x, y);
+}
+
+static void flash_rect(WORD x1, WORD y1, WORD x2, WORD y2)
+{
+    if (!g_win)
+        return;
+    SetDrMd(g_win->RPort, COMPLEMENT);
+    RectFill(g_win->RPort, x1, y1, x2, y2);
+    Delay(2);
+    RectFill(g_win->RPort, x1, y1, x2, y2);
+    gui_pens();
+}
+
+static void flash_gadget(struct Gadget *gad)
+{
+    if (!gad || gad->GadgetID == GID_QUERY)
+        return;
+    flash_rect(gad->LeftEdge, gad->TopEdge,
+        (WORD)(gad->LeftEdge + gad->Width - 1),
+        (WORD)(gad->TopEdge + gad->Height - 1));
+}
+
+static void flash_result_index(UWORD idx)
+{
+    UWORD row;
+    WORD y;
+
+    if (!g_win || idx < g_main_top)
+        return;
+    row = (UWORD)(idx - g_main_top);
+    if (row >= main_visible_rows())
+        return;
+    y = (WORD)(RESULT_TEXT_Y - 8 + row * RESULT_ROW_H);
+    flash_rect(10, y, (WORD)(g_win->Width - 18), (WORD)(y + RESULT_ROW_H - 1));
 }
 
 static void draw_mode_marks(void)
@@ -1540,10 +1576,12 @@ static int handle_main_result_click(WORD mouse_y)
     if (!g_result_values[idx][0])
         return 0;
     if (g_hit_kind == HIT_ARTISTS) {
+        flash_result_index(idx);
         fetch_artist_albums(g_result_values[idx], g_result_select[idx]);
         return 1;
     }
     if (g_hit_kind == HIT_ALBUMS) {
+        flash_result_index(idx);
         fetch_album_tracks(g_result_values[idx], g_result_select[idx]);
         return 1;
     }
@@ -1665,6 +1703,7 @@ int main(void)
             } else if (cls == IDCMP_MOUSEBUTTONS && code == SELECTDOWN) {
                 handle_main_result_click(mouse_y);
             } else if (cls == IDCMP_GADGETUP && gad) {
+                flash_gadget(gad);
                 if (gad->GadgetID == GID_SEARCH || gad->GadgetID == GID_QUERY)
                     do_search();
                 else if (gad->GadgetID == GID_ARTIST) {

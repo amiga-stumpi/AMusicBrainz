@@ -19,6 +19,7 @@ It uses the public `bsdsocket.library` API directly, so it is intended to work w
 - Artist-result click loads the artist release-group album list sorted by year
 - Album click loads the album track list in track order
 - Scroll buttons for long result lists
+- Visual click feedback for buttons and result rows
 - Basic UTF-8/JSON escape decoding for umlauts and Latin-1 characters
 - Classic Intuition only, no MUI/ReAction/GadTools requirement
 
