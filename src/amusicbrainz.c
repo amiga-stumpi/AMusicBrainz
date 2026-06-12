@@ -1573,9 +1573,16 @@ static int is_release_group_ref(const char *id)
 static void fetch_album_tracks(const char *release_id, const char *release_title)
 {
     char path[HTTP_REQ_SIZE];
+    char release_id_copy[QUERY_SIZE];
+    char release_title_copy[QUERY_SIZE];
     char actual_id[QUERY_SIZE];
     char status[96];
     int r;
+
+    copy_text(release_id_copy, sizeof(release_id_copy), release_id);
+    copy_text(release_title_copy, sizeof(release_title_copy), release_title);
+    release_id = release_id_copy;
+    release_title = release_title_copy;
 
     set_status("Loading tracks...");
     redraw();
@@ -1591,7 +1598,8 @@ static void fetch_album_tracks(const char *release_id, const char *release_title
             redraw();
             return;
         }
-        release_id = actual_id;
+        copy_text(release_id_copy, sizeof(release_id_copy), actual_id);
+        release_id = release_id_copy;
     }
     make_album_track_path(path, sizeof(path), release_id);
     r = http_fetch_path(path);
@@ -1818,7 +1826,8 @@ int main(void)
                     set_status("Mode: Track");
                     redraw();
                 } else if (gad->GadgetID == GID_BACK) {
-                    restore_album_results();
+                    if (g_hit_kind == HIT_TRACKS)
+                        restore_album_results();
                 } else if (gad->GadgetID == GID_SCROLL_UP) {
                     scroll_results_up();
                 } else if (gad->GadgetID == GID_SCROLL_DOWN) {
